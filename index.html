@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Voltora - Simulador Fotovoltaico Residencial</title>
+  <title>Voltora - Simulador Fotovoltaico Avanzado</title>
+  <!-- Librería para generar PDFs limpios -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
     body { background-color: #0b0f19; color: #f8fafc; padding: 20px; }
-    .container { max-width: 600px; margin: 0 auto; transition: max-width 0.4s ease; }
+    .container { max-width: 650px; margin: 0 auto; transition: max-width 0.4s ease; }
     .container.wide { max-width: 950px; }
 
     .header { text-align: center; margin-bottom: 32px; }
@@ -18,10 +20,14 @@
     .card { background: #131c31; border: 1px solid #1e293b; border-radius: 16px; padding: 28px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); width: 100%; }
     .card h2 { font-size: 1.25rem; margin-bottom: 20px; color: #f8fafc; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
     
-    .form-group { margin-bottom: 18px; }
+    .form-group { margin-bottom: 16px; }
     .form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1; }
-    .form-group input, .form-group select { width: 100%; padding: 12px; background: #0b0f19; border: 1.5px solid #334155; color: white; border-radius: 8px; font-size: 1rem; }
+    .form-group input, .form-group select { width: 100%; padding: 11px; background: #0b0f19; border: 1.5px solid #334155; color: white; border-radius: 8px; font-size: 1rem; }
     .form-group input:focus, .form-group select:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2); }
+
+    .checkbox-group { display: flex; align-items: center; gap: 10px; background: #0b0f19; border: 1.5px solid #334155; padding: 12px; border-radius: 8px; margin-top: 10px; cursor: pointer; }
+    .checkbox-group input { width: 18px; height: 18px; accent-color: #06b6d4; cursor: pointer; }
+    .checkbox-group label { font-size: 0.9rem; color: #cbd5e1; cursor: pointer; margin-bottom: 0; }
 
     .btn-primary {
       width: 100%;
@@ -36,11 +42,9 @@
       margin-top: 10px;
       transition: opacity 0.2s, transform 0.15s;
     }
-    .btn-primary:hover {
-      opacity: 0.9;
-      transform: translateY(-1px);
-    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
 
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
     .btn-secondary {
       width: 100%;
       padding: 10px;
@@ -51,10 +55,15 @@
       font-size: 0.9rem;
       font-weight: 600;
       cursor: pointer;
-      margin-bottom: 20px;
       transition: background 0.15s, color 0.15s;
     }
     .btn-secondary:hover { background: #334155; color: white; }
+    .btn-pdf {
+      background: rgba(6, 182, 212, 0.15);
+      color: #22d3ee;
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+    .btn-pdf:hover { background: rgba(6, 182, 212, 0.3); color: white; }
 
     .view { display: none; }
     .view.active { display: block; }
@@ -86,74 +95,96 @@
 <body>
 <div id="mainContainer" class="container">
   <header class="header">
-    <div class="badge">⚡ Energía Solar Fotovoltaica</div>
+    <div class="badge">⚡ Energía Solar Fotovoltaica Avanzada</div>
     <h1>Voltora PV</h1>
-    <p>Simulador inteligente de interconexión a la red eléctrica residencial</p>
+    <p>Simulador inteligente con análisis de techos, baterías híbridas y reporte PDF</p>
   </header>
   
   <main>
-    <!-- VISTA 1: Formulario Fotovoltaico -->
+    <!-- VISTA 1: Formulario Completo -->
     <section id="viewForm" class="card view active">
-      <h2>1. Parámetros Eléctricos</h2>
+      <h2>1. Parámetros Técnicos y del Hogar</h2>
       <div class="form-group">
         <label for="consumoKwh">Consumo bimestral promedio (kWh):</label>
-        <input type="number" id="consumoKwh" min="100" max="5000" value="850">
+        <input type="number" id="consumoKwh" min="100" max="5000" value="900">
       </div>
       <div class="form-group">
         <label for="costoBimestral">Pago bimestral actual en CFE ($ MXN):</label>
-        <input type="number" id="costoBimestral" min="200" step="100" value="2400">
+        <input type="number" id="costoBimestral" min="200" step="100" value="2600">
       </div>
       <div class="form-group">
         <label for="zonaSolar">Zona de Radiación (Horas Pico de Sol):</label>
         <select id="zonaSolar">
-          <option value="4.5">Sur / Sureste (Promedio 4.5 HPS)</option>
-          <option value="5.2" selected>Centro / Bajío (Promedio 5.2 HPS)</option>
-          <option value="6.0">Norte / Desierto (Promedio 6.0 HPS)</option>
+          <option value="4.5">Sur / Sureste (4.5 HPS)</option>
+          <option value="5.2" selected>Centro / Bajío (5.2 HPS)</option>
+          <option value="6.0">Norte / Desierto (6.0 HPS)</option>
         </select>
       </div>
-      <button id="btnCalcular" class="btn-primary">Calcular Sistema Fotovoltaico</button>
+      <div class="form-group">
+        <label for="orientacionTecho">Orientación e Inclinación del Techo:</label>
+        <select id="orientacionTecho">
+          <option value="1.0">Sur / Inclinación Óptima (100% Eficiencia)</option>
+          <option value="0.90">Sureste / Suroeste (90% Eficiencia)</option>
+          <option value="0.80">Este / Oeste (80% Eficiencia)</option>
+          <option value="0.70">Techo plano desfavorable o sombra parcial (70% Eficiencia)</option>
+        </select>
+      </div>
+      
+      <div class="checkbox-group">
+        <input type="checkbox" id="conBateria">
+        <label for="conBateria">Incluir sistema de respaldo con Batería de Litio (5 kWh para apagones)</label>
+      </div>
+
+      <button id="btnCalcular" class="btn-primary">Generar Proyecto Fotovoltaico</button>
     </section>
 
-    <!-- VISTA 2: Resultados del Sistema Fotovoltaico -->
+    <!-- VISTA 2: Resultados e Informe -->
     <section id="viewResults" class="card view">
-      <button id="btnVolver" class="btn-secondary">← Ajustar Parámetros</button>
-      <h2>2. Arquitectura del Sistema Solar</h2>
-      <div class="highlight-box">
-        <span class="label">Configuración Recomendada</span>
-        <div class="big-value" id="resPaneles">6 Paneles de 550W</div>
-        <span class="sub-label" id="resCapacidad">Potencia total instalada: 3.3 kWp</span>
+      <div class="actions-grid">
+        <button id="btnVolver" class="btn-secondary">← Modificar Datos</button>
+        <button id="btnPdf" class="btn-secondary btn-pdf">📥 Descargar Reporte PDF</button>
       </div>
-      <div class="metrics-grid">
-        <div class="metric-card">
-          <span class="m-title">Inversión Estimada (Turnkey)</span>
-          <span class="m-value" id="resCosto">$48,500 MXN</span>
+
+      <!-- Contenedor que se exportará a PDF -->
+      <div id="pdfContent">
+        <h2>2. Propuesta Técnica y Financiera</h2>
+        <div class="highlight-box">
+          <span class="label">Configuración del Sistema</span>
+          <div class="big-value" id="resPaneles">6 Paneles de 550W</div>
+          <span class="sub-label" id="resCapacidad">Potencia: 3.3 kWp | Respaldo: No</span>
         </div>
-        <div class="metric-card green">
-          <span class="m-title">Ahorro Anual Proyectado</span>
-          <span class="m-value" id="resAhorroAnual">$13,200 MXN</span>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <span class="m-title">Inversión Total Estimada</span>
+            <span class="m-value" id="resCosto">$48,500 MXN</span>
+          </div>
+          <div class="metric-card green">
+            <span class="m-title">Ahorro Anual Proyectado</span>
+            <span class="m-value" id="resAhorroAnual">$14,000 MXN</span>
+          </div>
+          <div class="metric-card">
+            <span class="m-title">Retorno de Inversión</span>
+            <span class="m-value" id="resPayback">3 años, 5 meses</span>
+          </div>
+          <div class="metric-card green">
+            <span class="m-title">Generación Anual Est.</span>
+            <span class="m-value" id="resKwhAnual">5,200 kWh/año</span>
+          </div>
         </div>
-        <div class="metric-card">
-          <span class="m-title">Retorno de Inversión</span>
-          <span class="m-value" id="resPayback">3 años, 8 meses</span>
+        <div class="chart-box">
+          <h3>Comparativa de Gasto Bimestral CFE (MXN)</h3>
+          <div class="bar-group">
+            <div class="bar-label"><span>Sin Paneles</span><span id="txtGastoActual">$2,600</span></div>
+            <div class="bar-track"><div class="bar-fill red" style="width: 100%;"></div></div>
+          </div>
+          <div class="bar-group">
+            <div class="bar-label"><span>Con Paneles (Tarifa Mínima)</span><span id="txtGastoNuevo">$110</span></div>
+            <div class="bar-track"><div class="bar-fill green" id="barNuevo" style="width: 5%;"></div></div>
+          </div>
         </div>
-        <div class="metric-card green">
-          <span class="m-title">Generación Anual Est.</span>
-          <span class="m-value" id="resKwhAnual">5,100 kWh/año</span>
+        <div class="eco-box">
+          <span>🌱 Impacto Ambiental: Dejarás de emitir <strong id="resCo2">2.4 toneladas</strong> de CO₂ al año con esta arquitectura solar.</span>
         </div>
-      </div>
-      <div class="chart-box">
-        <h3>Comparativa de Gasto Bimestral CFE (MXN)</h3>
-        <div class="bar-group">
-          <div class="bar-label"><span>Sin Paneles (Tarifa Alta)</span><span id="txtGastoActual">$2,400</span></div>
-          <div class="bar-track"><div class="bar-fill red" style="width: 100%;"></div></div>
-        </div>
-        <div class="bar-group">
-          <div class="bar-label"><span>Con Paneles (Tarifa Mínima CFE)</span><span id="txtGastoNuevo">$110</span></div>
-          <div class="bar-track"><div class="bar-fill green" id="barNuevo" style="width: 5%;"></div></div>
-        </div>
-      </div>
-      <div class="eco-box">
-        <span>🌱 Huella Verde: Dejarás de emitir <strong id="resCo2">2.4 toneladas</strong> de CO₂ al año (equivalente a autos fuera de circulación).</span>
       </div>
     </section>
   </main>
@@ -168,22 +199,29 @@
     const consumoKwh = parseFloat(document.getElementById('consumoKwh').value) || 500;
     const costoBimestral = parseFloat(document.getElementById('costoBimestral').value) || 1500;
     const hps = parseFloat(document.getElementById('zonaSolar').value) || 5.2;
+    const eficienciaTecho = parseFloat(document.getElementById('orientacionTecho').value) || 1.0;
+    const incluirBateria = document.getElementById('conBateria').checked;
 
-    // 1. Cálculo de kW necesarios (Consumo diario / HPS * 30 días con factor de eficiencia de 0.80)
-    const consumoDiario = consumoKwh / 60; // Bimestral a diario aproximado
-    const kwNecesarios = consumoDiario / (hps * 0.80);
+    // Cálculo fotovoltaico ajustado por eficiencia del techo
+    const consumoDiario = consumoKwh / 60;
+    // Aplicamos el factor de orientación del techo
+    const kwNecesarios = consumoDiario / (hps * 0.80 * eficienciaTecho);
     
-    // Asumimos paneles estándar de 550W (0.55 kW)
     let numPaneles = Math.ceil(kwNecesarios / 0.55);
     if (numPaneles < 2) numPaneles = 2;
     const potenciaTotalKwp = (numPaneles * 0.55).toFixed(1);
 
-    // 2. Costo estimado de instalación fotovoltaica en México (aprox $14,000 - $16,000 MXN por kW instalado)
-    const costoInstalacion = Math.round(potenciaTotalKwp * 14500);
+    // Costo base de paneles + costo extra si incluye inversor híbrido y batería de litio (~$25,000 extra)
+    let costoInstalacion = Math.round(potenciaTotalKwp * 14500);
+    let textoBateria = "Sin Respaldo";
+    if (incluirBateria) {
+      costoInstalacion += 28000; // Costo estimado banco de baterías de litio + adecuación híbrida
+      textoBateria = "Incluye Batería 5 kWh (Híbrido)";
+    }
 
-    // 3. Ahorro financiero (se elimina casi todo el consumo, dejando un pago mínimo fijo de CFE de ~$100 bimestrales)
+    // Ahorro financiero
     const costoAnualActual = costoBimestral * 6;
-    const costoAnualNuevo = 100 * 6; // Pago mínimo de interconexión
+    const costoAnualNuevo = 100 * 6; // Tarifa mínima CFE
     const ahorroAnual = Math.max(0, costoAnualActual - costoAnualNuevo);
     const ahorroBimestral = ahorroAnual / 6;
 
@@ -195,15 +233,13 @@
     if (anios > 0) textoPayback += `${anios} año${anios > 1 ? 's' : ''}`;
     if (meses > 0) textoPayback += `${anios > 0 ? ', ' : ''}${meses} mes${meses > 1 ? 'es' : ''}`;
 
-    // Generación anual estimada en kWh
-    const generacionAnual = Math.round(potenciaTotalKwp * hps * 365 * 0.80);
-
-    // CO2 (Factor de emisión promedio CFE aprox 0.45 kg CO2 por kWh)
+    // Generación anual ajustada por orientación del techo
+    const generacionAnual = Math.round(potenciaTotalKwp * hps * 365 * 0.80 * eficienciaTecho);
     const co2Ton = ((generacionAnual * 0.45) / 1000).toFixed(1);
 
     // Actualizar UI
     document.getElementById('resPaneles').textContent = `${numPaneles} Paneles de 550W`;
-    document.getElementById('resCapacidad').textContent = `Potencia total instalada: ${potenciaTotalKwp} kWp`;
+    document.getElementById('resCapacidad').textContent = `Potencia: ${potenciaTotalKwp} kWp | ${textoBateria}`;
     document.getElementById('resCosto').textContent = `${formatoMoneda(costoInstalacion)} MXN`;
     document.getElementById('resAhorroAnual').textContent = `${formatoMoneda(ahorroAnual)} MXN`;
     document.getElementById('resPayback').textContent = textoPayback || "N/A";
@@ -212,7 +248,6 @@
     document.getElementById('txtGastoActual').textContent = formatoMoneda(costoBimestral);
     document.getElementById('txtGastoNuevo').textContent = formatoMoneda(100);
     
-    // Porcentaje visual de la barra nueva respecto a la actual
     let porcBarra = Math.round((100 / costoBimestral) * 100);
     if (porcBarra < 5) porcBarra = 5;
     if (porcBarra > 90) porcBarra = 90;
@@ -220,7 +255,7 @@
 
     document.getElementById('resCo2').textContent = `${co2Ton} toneladas`;
 
-    // Transición de vistas
+    // Cambiar vistas
     document.getElementById('viewForm').classList.remove('active');
     document.getElementById('viewResults').classList.add('active');
     document.getElementById('mainContainer').classList.add('wide');
@@ -234,8 +269,21 @@
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
+  function descargarPDF() {
+    const elemento = document.getElementById('pdfContent');
+    const opciones = {
+      margin:       10,
+      filename:     'Reporte_Tecnico_Voltora_PV.pdf',
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().from(elemento).set(opciones).save();
+  }
+
   document.getElementById('btnCalcular').addEventListener('click', ejecutarCalculo);
   document.getElementById('btnVolver').addEventListener('click', volverAlFormulario);
+  document.getElementById('btnPdf').addEventListener('click', descargarPDF);
 </script>
 </body>
 </html>
