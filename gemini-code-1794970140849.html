@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voltora - Simulador Fotovoltaico Residencial</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+    body { background-color: #0b0f19; color: #f8fafc; padding: 20px; }
+    .container { max-width: 600px; margin: 0 auto; transition: max-width 0.4s ease; }
+    .container.wide { max-width: 950px; }
+
+    .header { text-align: center; margin-bottom: 32px; }
+    .badge { display: inline-block; background: rgba(6, 182, 212, 0.15); color: #22d3ee; font-size: 0.8rem; font-weight: 700; padding: 4px 14px; border-radius: 20px; margin-bottom: 10px; border: 1px solid rgba(6, 182, 212, 0.3); }
+    .header h1 { font-size: 2.2rem; color: #ffffff; letter-spacing: -0.5px; }
+    .header p { color: #94a3b8; margin-top: 6px; font-size: 0.95rem; }
+    
+    .card { background: #131c31; border: 1px solid #1e293b; border-radius: 16px; padding: 28px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); width: 100%; }
+    .card h2 { font-size: 1.25rem; margin-bottom: 20px; color: #f8fafc; border-bottom: 1px solid #1e293b; padding-bottom: 10px; }
+    
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; color: #cbd5e1; }
+    .form-group input, .form-group select { width: 100%; padding: 12px; background: #0b0f19; border: 1.5px solid #334155; color: white; border-radius: 8px; font-size: 1rem; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #22d3ee; box-shadow: 0 0 10px rgba(34, 211, 238, 0.2); }
+
+    .btn-primary {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #06b6d4, #10b981);
+      color: #0b0f19;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 10px;
+      background: #1e293b;
+      color: #94a3b8;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { background: #334155; color: white; }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .highlight-box { background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(16, 185, 129, 0.1)); border: 1px solid rgba(34, 211, 238, 0.3); border-radius: 12px; padding: 18px; text-align: center; margin-bottom: 20px; }
+    .highlight-box .label { font-size: 0.85rem; text-transform: uppercase; font-weight: 700; color: #22d3ee; letter-spacing: 0.5px; }
+    .highlight-box .big-value { font-size: 1.8rem; font-weight: 900; color: #34d399; margin: 6px 0; }
+    .highlight-box .sub-label { font-size: 0.85rem; color: #94a3b8; }
+    
+    .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+    .metric-card { background: #0b0f19; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
+    .metric-card.green { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.03); }
+    .m-title { display: block; font-size: 0.78rem; color: #94a3b8; font-weight: 600; }
+    .m-value { display: block; font-size: 1.2rem; font-weight: 800; color: #f8fafc; margin-top: 4px; }
+    .metric-card.green .m-value { color: #34d399; }
+    
+    .chart-box { margin-bottom: 18px; }
+    .chart-box h3 { font-size: 0.95rem; margin-bottom: 10px; color: #cbd5e1; }
+    .bar-group { margin-bottom: 10px; }
+    .bar-label { display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600; margin-bottom: 4px; color: #94a3b8; }
+    .bar-track { background: #0b0f19; height: 12px; border-radius: 6px; overflow: hidden; border: 1px solid #1e293b; }
+    .bar-fill { height: 100%; border-radius: 6px; transition: width 0.4s ease; }
+    .bar-fill.red { background: #ef4444; }
+    .bar-fill.green { background: #34d399; }
+    
+    .eco-box { background: rgba(16, 185, 129, 0.08); border-left: 4px solid #34d399; padding: 14px; border-radius: 8px; font-size: 0.88rem; color: #6ee7b7; }
+  </style>
+</head>
+<body>
+<div id="mainContainer" class="container">
+  <header class="header">
+    <div class="badge">⚡ Energía Solar Fotovoltaica</div>
+    <h1>Voltora PV</h1>
+    <p>Simulador inteligente de interconexión a la red eléctrica residencial</p>
+  </header>
+  
+  <main>
+    <!-- VISTA 1: Formulario Fotovoltaico -->
+    <section id="viewForm" class="card view active">
+      <h2>1. Parámetros Eléctricos</h2>
+      <div class="form-group">
+        <label for="consumoKwh">Consumo bimestral promedio (kWh):</label>
+        <input type="number" id="consumoKwh" min="100" max="5000" value="850">
+      </div>
+      <div class="form-group">
+        <label for="costoBimestral">Pago bimestral actual en CFE ($ MXN):</label>
+        <input type="number" id="costoBimestral" min="200" step="100" value="2400">
+      </div>
+      <div class="form-group">
+        <label for="zonaSolar">Zona de Radiación (Horas Pico de Sol):</label>
+        <select id="zonaSolar">
+          <option value="4.5">Sur / Sureste (Promedio 4.5 HPS)</option>
+          <option value="5.2" selected>Centro / Bajío (Promedio 5.2 HPS)</option>
+          <option value="6.0">Norte / Desierto (Promedio 6.0 HPS)</option>
+        </select>
+      </div>
+      <button id="btnCalcular" class="btn-primary">Calcular Sistema Fotovoltaico</button>
+    </section>
+
+    <!-- VISTA 2: Resultados del Sistema Fotovoltaico -->
+    <section id="viewResults" class="card view">
+      <button id="btnVolver" class="btn-secondary">← Ajustar Parámetros</button>
+      <h2>2. Arquitectura del Sistema Solar</h2>
+      <div class="highlight-box">
+        <span class="label">Configuración Recomendada</span>
+        <div class="big-value" id="resPaneles">6 Paneles de 550W</div>
+        <span class="sub-label" id="resCapacidad">Potencia total instalada: 3.3 kWp</span>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <span class="m-title">Inversión Estimada (Turnkey)</span>
+          <span class="m-value" id="resCosto">$48,500 MXN</span>
+        </div>
+        <div class="metric-card green">
+          <span class="m-title">Ahorro Anual Proyectado</span>
+          <span class="m-value" id="resAhorroAnual">$13,200 MXN</span>
+        </div>
+        <div class="metric-card">
+          <span class="m-title">Retorno de Inversión</span>
+          <span class="m-value" id="resPayback">3 años, 8 meses</span>
+        </div>
+        <div class="metric-card green">
+          <span class="m-title">Generación Anual Est.</span>
+          <span class="m-value" id="resKwhAnual">5,100 kWh/año</span>
+        </div>
+      </div>
+      <div class="chart-box">
+        <h3>Comparativa de Gasto Bimestral CFE (MXN)</h3>
+        <div class="bar-group">
+          <div class="bar-label"><span>Sin Paneles (Tarifa Alta)</span><span id="txtGastoActual">$2,400</span></div>
+          <div class="bar-track"><div class="bar-fill red" style="width: 100%;"></div></div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-label"><span>Con Paneles (Tarifa Mínima CFE)</span><span id="txtGastoNuevo">$110</span></div>
+          <div class="bar-track"><div class="bar-fill green" id="barNuevo" style="width: 5%;"></div></div>
+        </div>
+      </div>
+      <div class="eco-box">
+        <span>🌱 Huella Verde: Dejarás de emitir <strong id="resCo2">2.4 toneladas</strong> de CO₂ al año (equivalente a autos fuera de circulación).</span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  function formatoMoneda(c) {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(c);
+  }
+
+  function ejecutarCalculo() {
+    const consumoKwh = parseFloat(document.getElementById('consumoKwh').value) || 500;
+    const costoBimestral = parseFloat(document.getElementById('costoBimestral').value) || 1500;
+    const hps = parseFloat(document.getElementById('zonaSolar').value) || 5.2;
+
+    // 1. Cálculo de kW necesarios (Consumo diario / HPS * 30 días con factor de eficiencia de 0.80)
+    const consumoDiario = consumoKwh / 60; // Bimestral a diario aproximado
+    const kwNecesarios = consumoDiario / (hps * 0.80);
+    
+    // Asumimos paneles estándar de 550W (0.55 kW)
+    let numPaneles = Math.ceil(kwNecesarios / 0.55);
+    if (numPaneles < 2) numPaneles = 2;
+    const potenciaTotalKwp = (numPaneles * 0.55).toFixed(1);
+
+    // 2. Costo estimado de instalación fotovoltaica en México (aprox $14,000 - $16,000 MXN por kW instalado)
+    const costoInstalacion = Math.round(potenciaTotalKwp * 14500);
+
+    // 3. Ahorro financiero (se elimina casi todo el consumo, dejando un pago mínimo fijo de CFE de ~$100 bimestrales)
+    const costoAnualActual = costoBimestral * 6;
+    const costoAnualNuevo = 100 * 6; // Pago mínimo de interconexión
+    const ahorroAnual = Math.max(0, costoAnualActual - costoAnualNuevo);
+    const ahorroBimestral = ahorroAnual / 6;
+
+    // Payback
+    const mesesPayback = ahorroBimestral > 0 ? Math.ceil((costoInstalacion / ahorroBimestral) * 2) : 0;
+    const anios = Math.floor(mesesPayback / 12);
+    const meses = mesesPayback % 12;
+    let textoPayback = "";
+    if (anios > 0) textoPayback += `${anios} año${anios > 1 ? 's' : ''}`;
+    if (meses > 0) textoPayback += `${anios > 0 ? ', ' : ''}${meses} mes${meses > 1 ? 'es' : ''}`;
+
+    // Generación anual estimada en kWh
+    const generacionAnual = Math.round(potenciaTotalKwp * hps * 365 * 0.80);
+
+    // CO2 (Factor de emisión promedio CFE aprox 0.45 kg CO2 por kWh)
+    const co2Ton = ((generacionAnual * 0.45) / 1000).toFixed(1);
+
+    // Actualizar UI
+    document.getElementById('resPaneles').textContent = `${numPaneles} Paneles de 550W`;
+    document.getElementById('resCapacidad').textContent = `Potencia total instalada: ${potenciaTotalKwp} kWp`;
+    document.getElementById('resCosto').textContent = `${formatoMoneda(costoInstalacion)} MXN`;
+    document.getElementById('resAhorroAnual').textContent = `${formatoMoneda(ahorroAnual)} MXN`;
+    document.getElementById('resPayback').textContent = textoPayback || "N/A";
+    document.getElementById('resKwhAnual').textContent = `${generacionAnual.toLocaleString()} kWh/año`;
+
+    document.getElementById('txtGastoActual').textContent = formatoMoneda(costoBimestral);
+    document.getElementById('txtGastoNuevo').textContent = formatoMoneda(100);
+    
+    // Porcentaje visual de la barra nueva respecto a la actual
+    let porcBarra = Math.round((100 / costoBimestral) * 100);
+    if (porcBarra < 5) porcBarra = 5;
+    if (porcBarra > 90) porcBarra = 90;
+    document.getElementById('barNuevo').style.width = `${porcBarra}%`;
+
+    document.getElementById('resCo2').textContent = `${co2Ton} toneladas`;
+
+    // Transición de vistas
+    document.getElementById('viewForm').classList.remove('active');
+    document.getElementById('viewResults').classList.add('active');
+    document.getElementById('mainContainer').classList.add('wide');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function volverAlFormulario() {
+    document.getElementById('viewResults').classList.remove('active');
+    document.getElementById('viewForm').classList.add('active');
+    document.getElementById('mainContainer').classList.remove('wide');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('btnCalcular').addEventListener('click', ejecutarCalculo);
+  document.getElementById('btnVolver').addEventListener('click', volverAlFormulario);
+</script>
+</body>
+</html>
