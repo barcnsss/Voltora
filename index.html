@@ -76,9 +76,11 @@
     .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
     .metric-card { background: #0b0f19; border: 1px solid #1e293b; border-radius: 10px; padding: 14px; }
     .metric-card.green { border-color: rgba(16, 185, 129, 0.3); background: rgba(16, 185, 129, 0.03); }
+    .metric-card.cyan { border-color: rgba(6, 182, 212, 0.3); background: rgba(6, 182, 212, 0.03); }
     .m-title { display: block; font-size: 0.78rem; color: #94a3b8; font-weight: 600; }
     .m-value { display: block; font-size: 1.2rem; font-weight: 800; color: #f8fafc; margin-top: 4px; }
     .metric-card.green .m-value { color: #34d399; }
+    .metric-card.cyan .m-value { color: #22d3ee; }
     
     .chart-box { margin-bottom: 18px; }
     .chart-box h3 { font-size: 0.95rem; margin-bottom: 10px; color: #cbd5e1; }
@@ -131,8 +133,8 @@
       </div>
       
       <div class="checkbox-group">
-        <input type="checkbox" id="conBateria">
-        <label for="conBateria">Incluir sistema de respaldo con Batería de Litio (5 kWh para apagones)</label>
+        <input type="checkbox" id="conBateria" checked>
+        <label for="conBateria">Incluir sistema de respaldo con Batería de Litio (5 kWh)</label>
       </div>
 
       <button id="btnCalcular" class="btn-primary">Generar Proyecto Fotovoltaico</button>
@@ -151,12 +153,16 @@
         <div class="highlight-box">
           <span class="label">Configuración del Sistema</span>
           <div class="big-value" id="resPaneles">6 Paneles de 550W</div>
-          <span class="sub-label" id="resCapacidad">Potencia: 3.3 kWp | Respaldo: No</span>
+          <span class="sub-label" id="resCapacidad">Potencia: 3.3 kWp</span>
         </div>
         <div class="metrics-grid">
           <div class="metric-card">
             <span class="m-title">Inversión Total Estimada</span>
-            <span class="m-value" id="resCosto">$48,500 MXN</span>
+            <span class="m-value" id="resCosto">$76,500 MXN</span>
+          </div>
+          <div class="metric-card cyan">
+            <span class="m-title">Banco de Baterías</span>
+            <span class="m-value" id="resBateriaInfo">5 kWh (Litio)</span>
           </div>
           <div class="metric-card green">
             <span class="m-title">Ahorro Anual Proyectado</span>
@@ -164,11 +170,17 @@
           </div>
           <div class="metric-card">
             <span class="m-title">Retorno de Inversión</span>
-            <span class="m-value" id="resPayback">3 años, 5 meses</span>
+            <span class="m-value" id="resPayback">4 años, 2 meses</span>
           </div>
+        </div>
+        <div class="metrics-grid" style="margin-top: -8px;">
           <div class="metric-card green">
             <span class="m-title">Generación Anual Est.</span>
             <span class="m-value" id="resKwhAnual">5,200 kWh/año</span>
+          </div>
+          <div class="metric-card cyan">
+            <span class="m-title">Autonomía en Apagón</span>
+            <span class="m-value" id="resAutonomia">~8 a 10 horas</span>
           </div>
         </div>
         <div class="chart-box">
@@ -202,30 +214,34 @@
     const eficienciaTecho = parseFloat(document.getElementById('orientacionTecho').value) || 1.0;
     const incluirBateria = document.getElementById('conBateria').checked;
 
-    // Cálculo fotovoltaico ajustado por eficiencia del techo
     const consumoDiario = consumoKwh / 60;
-    // Aplicamos el factor de orientación del techo
     const kwNecesarios = consumoDiario / (hps * 0.80 * eficienciaTecho);
     
     let numPaneles = Math.ceil(kwNecesarios / 0.55);
     if (numPaneles < 2) numPaneles = 2;
     const potenciaTotalKwp = (numPaneles * 0.55).toFixed(1);
 
-    // Costo base de paneles + costo extra si incluye inversor híbrido y batería de litio (~$25,000 extra)
     let costoInstalacion = Math.round(potenciaTotalKwp * 14500);
-    let textoBateria = "Sin Respaldo";
+    
+    let textoBateriaInfo = "Sin Respaldo";
+    let textoAutonomia = "N/A (Red eléctrica)";
+
     if (incluirBateria) {
-      costoInstalacion += 28000; // Costo estimado banco de baterías de litio + adecuación híbrida
-      textoBateria = "Incluye Batería 5 kWh (Híbrido)";
+      costoInstalacion += 28000; // Costo de inversor híbrido + batería de litio de 5 kWh
+      textoBateriaInfo = "5 kWh (Litio Híbrido)";
+      
+      // Cálculo estimado de autonomía para cargas críticas (aprox 500W-600W continuos: refri, luces, módem, TV)
+      textoAutonomia = "~8 a 10 horas"; 
+    } else {
+      textoBateriaInfo = "No integrado";
+      textoAutonomia = "Sin respaldo autónomo";
     }
 
-    // Ahorro financiero
     const costoAnualActual = costoBimestral * 6;
-    const costoAnualNuevo = 100 * 6; // Tarifa mínima CFE
+    const costoAnualNuevo = 100 * 6;
     const ahorroAnual = Math.max(0, costoAnualActual - costoAnualNuevo);
     const ahorroBimestral = ahorroAnual / 6;
 
-    // Payback
     const mesesPayback = ahorroBimestral > 0 ? Math.ceil((costoInstalacion / ahorroBimestral) * 2) : 0;
     const anios = Math.floor(mesesPayback / 12);
     const meses = mesesPayback % 12;
@@ -233,17 +249,18 @@
     if (anios > 0) textoPayback += `${anios} año${anios > 1 ? 's' : ''}`;
     if (meses > 0) textoPayback += `${anios > 0 ? ', ' : ''}${meses} mes${meses > 1 ? 'es' : ''}`;
 
-    // Generación anual ajustada por orientación del techo
     const generacionAnual = Math.round(potenciaTotalKwp * hps * 365 * 0.80 * eficienciaTecho);
     const co2Ton = ((generacionAnual * 0.45) / 1000).toFixed(1);
 
     // Actualizar UI
     document.getElementById('resPaneles').textContent = `${numPaneles} Paneles de 550W`;
-    document.getElementById('resCapacidad').textContent = `Potencia: ${potenciaTotalKwp} kWp | ${textoBateria}`;
+    document.getElementById('resCapacidad').textContent = `Potencia: ${potenciaTotalKwp} kWp`;
     document.getElementById('resCosto').textContent = `${formatoMoneda(costoInstalacion)} MXN`;
+    document.getElementById('resBateriaInfo').textContent = textoBateriaInfo;
     document.getElementById('resAhorroAnual').textContent = `${formatoMoneda(ahorroAnual)} MXN`;
     document.getElementById('resPayback').textContent = textoPayback || "N/A";
     document.getElementById('resKwhAnual').textContent = `${generacionAnual.toLocaleString()} kWh/año`;
+    document.getElementById('resAutonomia').textContent = textoAutonomia;
 
     document.getElementById('txtGastoActual').textContent = formatoMoneda(costoBimestral);
     document.getElementById('txtGastoNuevo').textContent = formatoMoneda(100);
@@ -255,7 +272,6 @@
 
     document.getElementById('resCo2').textContent = `${co2Ton} toneladas`;
 
-    // Cambiar vistas
     document.getElementById('viewForm').classList.remove('active');
     document.getElementById('viewResults').classList.add('active');
     document.getElementById('mainContainer').classList.add('wide');
